@@ -73,4 +73,8 @@ type EDVStore interface {
 
 	// StoreDataVaultConfiguration stores the given DataVaultConfiguration and vaultID
 	StoreDataVaultConfiguration(config *models.DataVaultConfiguration, vaultID string) error
+
+	// RetrieveDataVaultConfiguration retrieves a DataVaultConfiguration given the vaultID
+	RetrieveDataVaultConfiguration(vaultID string) (*models.DataVaultConfiguration, error)
+
 }

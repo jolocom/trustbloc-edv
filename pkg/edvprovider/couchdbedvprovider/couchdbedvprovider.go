@@ -374,6 +374,21 @@ func (c *CouchDBEDVStore) StoreDataVaultConfiguration(config *models.DataVaultCo
 	return c.coreStore.Put(vaultID, configBytes)
 }
 
+// RetrieveDataVaultConfiguration retrieves a DataVaultConfiguration given the vaultID
+func (c *CouchDBEDVStore) RetrieveDataVaultConfiguration(vaultID string) (*models.DataVaultConfiguration, error) {
+	configEntryBytes, err := c.coreStore.Get(vaultID)
+	if err != nil {
+		return nil, messages.ErrVaultNotFound
+	}
+
+	var configEntry models.DataVaultConfigurationMapping
+	err = json.Unmarshal(configEntryBytes, &configEntry)
+	if err != nil {
+		return nil, err
+	}
+	return &configEntry.DataVaultConfiguration, nil
+}
+
 func (c *CouchDBEDVStore) checkDuplicateReferenceID(referenceID string) error {
 	query := `{"selector":{"` + mapConfigReferenceIDField + `":"` + referenceID +
 		`"},"use_index": ["EDV_ConfigStoreDesignDoc", "EDV_ReferenceId"]}`

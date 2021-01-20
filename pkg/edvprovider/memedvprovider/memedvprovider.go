@@ -146,11 +146,30 @@ func (m MemEDVStore) StoreDataVaultConfiguration(config *models.DataVaultConfigu
 		return fmt.Errorf(messages.FailToMarshalConfig, err)
 	}
 
-	return m.coreStore.Put(config.ReferenceID, configBytes)
+	err = m.coreStore.Put(fmt.Sprintf("ref:%s", config.ReferenceID), []byte(vaultID))
+	if err != nil {
+		return err
+	}
+	return m.coreStore.Put(vaultID, configBytes)
+}
+
+// RetrieveDataVaultConfiguration retrieves a DataVaultConfiguration given the vaultID
+func (m MemEDVStore) RetrieveDataVaultConfiguration(vaultID string) (*models.DataVaultConfiguration, error) {
+	configEntryBytes, err := m.coreStore.Get(vaultID)
+	if err != nil {
+		return nil, messages.ErrVaultNotFound
+	}
+
+	var configEntry models.DataVaultConfigurationMapping
+	err = json.Unmarshal(configEntryBytes, &configEntry)
+	if err != nil {
+		return nil, err
+	}
+	return &configEntry.DataVaultConfiguration, nil
 }
 
 func (m MemEDVStore) checkDuplicateReferenceID(referenceID string) error {
-	_, err := m.coreStore.Get(referenceID)
+	_, err := m.coreStore.Get(fmt.Sprintf("ref:%s", referenceID))
 	if err == nil {
 		return messages.ErrDuplicateVault
 	}

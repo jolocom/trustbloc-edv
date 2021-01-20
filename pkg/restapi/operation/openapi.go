@@ -34,6 +34,11 @@ type createVaultRes struct { // nolint: unused,deadcode
 	Location string
 }
 
+// getVaultRes model
+//
+// swagger:response getVaultRes
+type getVaultRes = models.DataVaultConfiguration // nolint: unused,deadcode
+
 // queryVaultReq model
 //
 // swagger:parameters queryVaultReq

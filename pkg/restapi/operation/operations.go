@@ -34,6 +34,7 @@ const (
 	docIDPathVariable         = "docID"
 
 	createVaultEndpoint = edvCommonEndpointPathRoot
+	getVaultEndpoint = edvCommonEndpointPathRoot + "/{" + vaultIDPathVariable + "}"
 	// TODO (#126): As of writing, the spec shows multiple, conflicting query endpoints.
 	// See: https://github.com/decentralized-identity/secure-data-store/issues/110.
 	// The endpoint listed below is the correct one (per the comment made by one of the spec contributors).
@@ -110,6 +111,7 @@ func (c *Operation) registerHandler() {
 	// Add more protocol endpoints here to expose them as controller API endpoints
 	c.handlers = []Handler{
 		support.NewHTTPHandler(createVaultEndpoint, http.MethodPost, c.createDataVaultHandler),
+		support.NewHTTPHandler(getVaultEndpoint, http.MethodGet, c.getDataVaultHandler),
 		support.NewHTTPHandler(queryVaultEndpoint, http.MethodPost, c.queryVaultHandler),
 		support.NewHTTPHandler(createDocumentEndpoint, http.MethodPost, c.createDocumentHandler),
 		support.NewHTTPHandler(readDocumentEndpoint, http.MethodGet, c.readDocumentHandler),
@@ -213,6 +215,33 @@ func (c *Operation) createDataVault(rw http.ResponseWriter, config *models.DataV
 	}
 
 	writeCreateDataVaultSuccess(rw, vaultID, hostURL, configBytesForLog, payload)
+}
+
+// Get Data Vault swagger:route GET /encrypted-data-vaults/{vaultID}
+//
+// Gets the vault configuration of an existing vault.
+//
+// Responses:
+//    default: genericError
+//        200: getVaultRes
+func (c *Operation) getDataVaultHandler(rw http.ResponseWriter, req *http.Request) {
+	vaultID, success := unescapePathVar(vaultIDPathVariable, mux.Vars(req), rw)
+	if !success {
+		return
+	}
+
+	config, err := c.vaultCollection.retrieveDataVaultConfiguration(vaultID)
+	if err != nil {
+		writeCreateDataVaultRequestReadFailure(rw, err)
+		return
+	}
+	configBytes, err := json.Marshal(config)
+	if err != nil {
+		writeCreateDataVaultRequestReadFailure(rw, err)
+		return
+	}
+
+	rw.Write(configBytes)
 }
 
 // Query Vault swagger:route POST /encrypted-data-vaults/{vaultID}/queries queryVaultReq
@@ -643,6 +672,20 @@ func (vc *VaultCollection) storeDataVaultConfiguration(config *models.DataVaultC
 	}
 
 	return nil
+}
+
+// retrieveDataVaultConfiguration retrieves a DataVaultConfiguration given a vaultID
+func (vc *VaultCollection) retrieveDataVaultConfiguration(vaultID string) (*models.DataVaultConfiguration, error) {
+	store, err := vc.provider.OpenStore(dataVaultConfigurationStoreName)
+	if err != nil {
+		if errors.Is(err, storage.ErrStoreNotFound) {
+			return nil, errors.New(messages.ConfigStoreNotFound)
+		}
+
+		return nil, err
+	}
+
+	return store.RetrieveDataVaultConfiguration(vaultID)
 }
 
 func (c *Operation) createDocument(rw http.ResponseWriter, requestBody []byte, hostURL, vaultID string) {

@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"unicode"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/google/uuid"
@@ -36,14 +37,19 @@ func GenerateEDVCompatibleID() (string, error) {
 func generateEDVCompatibleID(generateRandomBytes generateRandomBytesFunc) (string, error) {
 	randomBytes := make([]byte, 16)
 
-	_, err := generateRandomBytes(randomBytes)
-	if err != nil {
-		return "", err
+	for {
+		_, err := generateRandomBytes(randomBytes)
+		if err != nil {
+			return "", err
+		}
+
+		uuid, err := uuid.FromBytes(randomBytes)
+
+		if unicode.IsLetter(rune(uuid.String()[0])) {
+			base58EncodedUUID := base58.Encode(randomBytes)
+			return base58EncodedUUID, nil
+		}
 	}
-
-	base58EncodedUUID := base58.Encode(randomBytes)
-
-	return base58EncodedUUID, nil
 }
 
 // CheckIfBase58Encoded128BitValue can't tell if the value before being encoded was precisely 128 bits long.
